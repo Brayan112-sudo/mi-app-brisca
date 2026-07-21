@@ -3,132 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Brisca — Arcade</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+<title>La Brisca</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div id="banner-error" class="banner-error oculta"></div>
-<script>
-  window.addEventListener('error', function (e) {
-    var banner = document.getElementById('banner-error');
-    var origen = e.filename ? e.filename.split('/').pop() : '(desconocido)';
-    banner.textContent = 'Error en ' + origen + ' (línea ' + e.lineno + '): ' + e.message;
-    banner.classList.remove('oculta');
-  });
-</script>
+<h1>La Brisca</h1>
 
-<div class="fondo-arcade" aria-hidden="true"></div>
-
-<!-- ===================== PANTALLA INICIO ===================== -->
-<section id="pantalla-inicio" class="pantalla">
-  <div class="iconos-flotantes" aria-hidden="true">
-    <span class="icono-flota icono-flota-1"></span>
-    <span class="icono-flota icono-flota-2"></span>
-    <span class="icono-flota icono-flota-3"></span>
-    <span class="icono-flota icono-flota-4"></span>
-    <span class="icono-flota icono-flota-5"></span>
-    <span class="icono-flota icono-flota-6"></span>
-  </div>
-
-  <h1 class="titulo-juego">
-    <span class="titulo-linea1">LA</span>
-    <span class="titulo-linea2">BRISCA</span>
-  </h1>
-  <p class="subtitulo">40 cartas · Oros · Copas · Espadas · Bastos</p>
-
-  <div class="panel-inicio">
-    <label for="input-nombre" class="etiqueta-nombre">Tu nombre de jugador</label>
-    <input id="input-nombre" type="text" maxlength="20" placeholder="Escribe tu nombre..." autocomplete="off">
-
-    <button id="btn-jugar" class="btn-arcade btn-arcade-primario">▶ Jugar</button>
-    <button id="btn-ver-ranking" class="btn-arcade">🏆 Ranking</button>
-  </div>
-
-  <p class="parpadeo pie-inicio">1 Jugador contra la Máquina</p>
+<section id="pantalla-inicio">
+  <button id="btn-jugar">Jugar</button>
 </section>
 
-<!-- ===================== PANTALLA RANKING ===================== -->
-<section id="pantalla-ranking" class="pantalla oculta">
-  <h2 class="titulo-seccion">Mejores Puntajes</h2>
-  <div class="tabla-envoltorio">
-    <table class="tabla-ranking">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Nombre</th>
-          <th>Puntos</th>
-          <th>Resultado</th>
-        </tr>
-      </thead>
-      <tbody id="cuerpo-ranking"></tbody>
-    </table>
+<section id="pantalla-juego" class="oculta">
+  <div class="marcador">
+    <span>Tú: <span id="puntos-jugador">0</span></span>
+    <span>Máquina: <span id="puntos-maquina">0</span></span>
   </div>
-  <div class="fila-botones">
-    <button id="btn-volver-inicio" class="btn-arcade">← Menú</button>
-    <button id="btn-borrar-ranking" class="btn-arcade btn-arcade-peligro">Borrar ranking</button>
-  </div>
-</section>
-
-<!-- ===================== PANTALLA JUEGO ===================== -->
-<section id="pantalla-juego" class="pantalla oculta">
-  <header class="marcador">
-    <div class="marcador-lado">
-      <span class="marcador-nombre" id="nombre-jugador-lbl">Jugador</span>
-      <span class="marcador-puntos" id="puntos-jugador">0</span>
-    </div>
-    <button id="btn-menu" class="btn-arcade btn-arcade-mini" title="Volver al menú">✕</button>
-    <div class="marcador-lado marcador-lado-maquina">
-      <span class="marcador-nombre">Máquina</span>
-      <span class="marcador-puntos" id="puntos-maquina">0</span>
-    </div>
-  </header>
 
   <div class="mesa">
     <div class="mano-maquina" id="mano-maquina"></div>
 
     <div class="zona-central">
       <div class="zona-mazo">
-        <div class="pila-mazo" aria-hidden="true"></div>
-        <span class="mazo-contador"><span id="mazo-contador">0</span> cartas</span>
+        <span id="mazo-contador">0</span> cartas
       </div>
       <div class="zona-jugadas">
-        <div class="slot-jugada">
-          <span class="slot-etiqueta">Máquina</span>
-          <div id="carta-jugada-maquina" class="slot-carta"></div>
-        </div>
-        <div class="slot-jugada">
-          <span class="slot-etiqueta">Tú</span>
-          <div id="carta-jugada-jugador" class="slot-carta"></div>
-        </div>
+        <div id="carta-jugada-maquina" class="slot-carta"></div>
+        <div id="carta-jugada-jugador" class="slot-carta"></div>
       </div>
-      <div class="zona-triunfo-envoltorio">
-        <span class="mazo-contador">Triunfo</span>
-        <div id="zona-triunfo"></div>
+      <div class="zona-triunfo">
+        Triunfo: <span id="triunfo"></span>
       </div>
     </div>
 
     <div class="mano-jugador" id="mano-jugador"></div>
   </div>
 
-  <div id="mensaje" class="mensaje">Preparando la partida...</div>
+  <p id="mensaje"></p>
 </section>
 
-<!-- ===================== PANTALLA FIN ===================== -->
-<section id="pantalla-fin" class="pantalla oculta">
-  <h2 id="fin-titulo" class="fin-titulo">FIN DE LA PARTIDA</h2>
-  <p id="fin-detalle" class="fin-detalle"></p>
-  <div class="fila-botones">
-    <button id="btn-jugar-de-nuevo" class="btn-arcade btn-arcade-primario">↻ Jugar de nuevo</button>
-    <button id="btn-fin-ranking" class="btn-arcade">🏆 Ver ranking</button>
-  </div>
+<section id="pantalla-fin" class="oculta">
+  <h2 id="fin-titulo"></h2>
+  <p id="fin-detalle"></p>
+  <button id="btn-jugar-de-nuevo">Jugar de nuevo</button>
 </section>
 
-<script src="js/cards.js"></script>
-<script src="js/storage.js"></script>
 <script src="js/game.js"></script>
-<script src="js/ui.js"></script>
 </body>
 </html>
