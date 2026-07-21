@@ -1,5 +1,5 @@
 :{$PORT} {
-	root * .
+	root * brisca
 	file_server
 	encode gzip
 }
