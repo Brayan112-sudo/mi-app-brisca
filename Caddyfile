@@ -1,5 +1,5 @@
 :{$PORT} {
-	root * .
+	root * /app
 	file_server
 	encode gzip
 }
