@@ -1,4 +1,3 @@
-/* game.js - La Brisca */
 (function () {
   const PALOS = ['oros', 'copas', 'espadas', 'bastos'];
   const VALORES = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -31,10 +30,7 @@
     return false;
   }
 
-  function puntosCarta(carta) { return PUNTOS_VALOR[carta.valor]; }
-
   function robar() {
-    if (mazo.length === 0) return;
     if (manoJugador.length < 3 && mazo.length > 0) manoJugador.push(mazo.pop());
     if (manoMaquina.length < 3 && mazo.length > 0) manoMaquina.push(mazo.pop());
   }
@@ -102,14 +98,14 @@
   }
 
   function turnoMaquina() {
-    if (turno === 'maquina') {
-      let idx = Math.floor(Math.random() * manoMaquina.length);
-      cartaMesa = manoMaquina.splice(idx, 1)[0];
-      document.getElementById('carta-jugada-maquina').textContent = nombreCarta(cartaMesa);
-      turno = 'respuesta-jugador';
-      renderMano();
-      setMensaje('La máquina jugó ' + nombreCarta(cartaMesa) + '. Elige tu carta.');
-    }
+    if (turno !== 'maquina') return;
+    if (manoMaquina.length === 0) { finJuego(); return; }
+    let idx = Math.floor(Math.random() * manoMaquina.length);
+    cartaMesa = manoMaquina.splice(idx, 1)[0];
+    document.getElementById('carta-jugada-maquina').textContent = nombreCarta(cartaMesa);
+    turno = 'respuesta-jugador';
+    renderMano();
+    setMensaje('La máquina jugó ' + nombreCarta(cartaMesa) + '. Elige tu carta.');
   }
 
   function resolverBaza(cartaAbre, cartaResponde, jugadorAbrio) {
@@ -118,7 +114,7 @@
       ? ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto)
       : !ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto);
 
-    let pts = puntosCarta(cartaAbre) + puntosCarta(cartaResponde);
+    let pts = PUNTOS_VALOR[cartaAbre.valor] + PUNTOS_VALOR[cartaResponde.valor];
     if (jugadorGana) { puntosJugador += pts; turno = 'jugador'; }
     else { puntosMaquina += pts; turno = 'maquina'; }
 
