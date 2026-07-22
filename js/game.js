@@ -1,242 +1,172 @@
-/* game.js — La Brisca, versión de un solo archivo. */
+/* game.js - La Brisca */
 (function () {
+  const PALOS = ['oros', 'copas', 'espadas', 'bastos'];
+  const VALORES = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
+  const NOMBRES_VALOR = { 1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 10: 'S', 11: 'C', 12: 'R' };
+  const PUNTOS_VALOR = { 1: 11, 2: 0, 3: 10, 4: 0, 5: 0, 6: 0, 7: 0, 10: 2, 11: 3, 12: 4 };
+  const ORDEN_FUERZA = [1, 3, 12, 11, 10, 7, 6, 5, 4, 2];
 
-const PALOS = ['oros', 'copas', 'espadas', 'bastos'];
-const VALORES = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
-const NOMBRES_VALOR = { 1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 10: 'S', 11: 'C', 12: 'R' };
-const PUNTOS_VALOR = { 1: 11, 2: 0, 3: 10, 4: 0, 5: 0, 6: 0, 7: 0, 10: 2, 11: 3, 12: 4 };
-const ORDEN_FUERZA = [1, 3, 12, 11, 10, 7, 6, 5, 4, 2];
+  let mazo, triunfo, manoJugador, manoMaquina, puntosJugador, puntosMaquina, turno, nombreJugador, cartaMesa;
 
-function crearMazo() {
-  const mazo = [];
-  for (const palo of PALOS) {
-    for (const valor of VALORES) mazo.push({ palo, valor });
+  function crearMazo() {
+    let m = [];
+    for (let p of PALOS) for (let v of VALORES) m.push({ palo: p, valor: v });
+    for (let i = m.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [m[i], m[j]] = [m[j], m[i]];
+    }
+    return m;
   }
-  return mazo;
-}
 
-function barajar(mazo) {
-  const copia = [...mazo];
-  for (let i = copia.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copia[i], copia[j]] = [copia[j], copia[i]];
+  function fuerza(carta, paloTriunfo) {
+    let base = ORDEN_FUERZA.indexOf(carta.valor);
+    return carta.palo === paloTriunfo ? base + 100 : base;
   }
-  return copia;
-}
 
-const getPuntos = carta => PUNTOS_VALOR[carta.valor];
-const getFuerza = carta => ORDEN_FUERZA.length - ORDEN_FUERZA.indexOf(carta.valor);
-const nombreCarta = carta => `${NOMBRES_VALOR[carta.valor]} de ${palabraPalo(carta.palo)}`;
-const palabraPalo = palo => palo.charAt(0).toUpperCase() + palo.slice(1);
-
-function segundaGana(primera, segunda, triunfo) {
-  const primeraEsTriunfo = primera.palo === triunfo.palo;
-  const segundaEsTriunfo = segunda.palo === triunfo.palo;
-  if (segundaEsTriunfo && !primeraEsTriunfo) return true;
-  if (primeraEsTriunfo && !segundaEsTriunfo) return false;
-  if (primera.palo === segunda.palo) return getFuerza(segunda) > getFuerza(primera);
-  return false;
-}
-
-const estado = {
-  mazo: [],
-  triunfo: null,
-  manoJugador: [],
-  manoMaquina: [],
-  cartaLider: null,
-  lider: 'jugador',
-  puntosJugador: 0,
-  puntosMaquina: 0,
-  jugando: false,
-  ultimoResultado: null
-};
-
-function elegirLiderMaquina() {
-  const sinTriunfo = estado.manoMaquina.filter(c => c.palo !== estado.triunfo.palo);
-  const pool = sinTriunfo.length ? sinTriunfo : estado.manoMaquina;
-  return [...pool].sort((a, b) => getPuntos(a) - getPuntos(b) || getFuerza(a) - getFuerza(b))[0];
-}
-
-function elegirSeguidorMaquina(cartaLider) {
-  const mano = estado.manoMaquina;
-  const ganadoras = mano.filter(c => segundaGana(cartaLider, c, estado.triunfo));
-  if (ganadoras.length) {
-    const sinTriunfo = ganadoras.filter(c => c.palo !== estado.triunfo.palo);
-    const candidatas = sinTriunfo.length ? sinTriunfo : ganadoras;
-    candidatas.sort((a, b) => getFuerza(a) - getFuerza(b));
-    return candidatas[0];
+  function ganaBaza(c1, c2, paloTriunfo, paloAbierto) {
+    if (c1.palo === c2.palo) return fuerza(c1, paloTriunfo) > fuerza(c2, paloTriunfo);
+    if (c1.palo === paloTriunfo) return true;
+    if (c2.palo === paloTriunfo) return false;
+    if (c1.palo === paloAbierto) return true;
+    return false;
   }
-  return [...mano].sort((a, b) => getPuntos(a) - getPuntos(b) || getFuerza(a) - getFuerza(b))[0];
-}
 
-function iniciarPartida() {
-  const mazo = barajar(crearMazo());
-  estado.manoJugador = mazo.splice(0, 3);
-  estado.manoMaquina = mazo.splice(0, 3);
-  estado.triunfo = mazo.shift();
-  mazo.push(estado.triunfo);
-
-  estado.mazo = mazo;
-  estado.puntosJugador = 0;
-  estado.puntosMaquina = 0;
-  estado.lider = 'jugador';
-  estado.cartaLider = null;
-  estado.ultimoResultado = null;
-  estado.jugando = true;
-
-  mostrarPantalla('juego');
-  render();
-  mostrarMensaje(`Triunfo: ${nombreCarta(estado.triunfo)}. Tu turno.`);
-}
-
-function jugarCartaJugador(indice) {
-  if (!estado.jugando) return;
-  const carta = estado.manoJugador[indice];
-  if (!carta) return;
-
-  if (!estado.cartaLider) {
-    estado.manoJugador.splice(indice, 1);
-    estado.cartaLider = { de: 'jugador', carta };
-    render();
-    mostrarMensaje('Esperando a la máquina...');
-    setTimeout(turnoMaquinaSigue, 700);
-  } else if (estado.cartaLider.de === 'maquina') {
-    estado.manoJugador.splice(indice, 1);
-    resolverBaza({ de: 'jugador', carta });
+  function puntos(cartas) {
+    return cartas.reduce((s, c) => s + PUNTOS_VALOR[c.valor], 0);
   }
-}
 
-function turnoMaquinaLidera() {
-  if (!estado.jugando) return;
-  const carta = elegirLiderMaquina();
-  estado.manoMaquina.splice(estado.manoMaquina.indexOf(carta), 1);
-  estado.cartaLider = { de: 'maquina', carta };
-  render();
-  mostrarMensaje('La máquina abrió la baza. Elige tu carta.');
-}
-
-function turnoMaquinaSigue() {
-  if (!estado.jugando) return;
-  const carta = elegirSeguidorMaquina(estado.cartaLider.carta);
-  estado.manoMaquina.splice(estado.manoMaquina.indexOf(carta), 1);
-  resolverBaza({ de: 'maquina', carta });
-}
-
-function resolverBaza(segundaJugada) {
-  const primera = estado.cartaLider;
-  const segunda = segundaJugada;
-  const ganaSegunda = segundaGana(primera.carta, segunda.carta, estado.triunfo);
-  const ganador = ganaSegunda ? segunda.de : primera.de;
-  const puntosBaza = getPuntos(primera.carta) + getPuntos(segunda.carta);
-
-  if (ganador === 'jugador') estado.puntosJugador += puntosBaza;
-  else estado.puntosMaquina += puntosBaza;
-
-  estado.ultimoResultado = {
-    ganador,
-    puntosBaza,
-    cartaJugador: primera.de === 'jugador' ? primera.carta : segunda.carta,
-    cartaMaquina: primera.de === 'maquina' ? primera.carta : segunda.carta
-  };
-
-  robarCartas(ganador);
-  estado.lider = ganador;
-  estado.cartaLider = null;
-
-  render();
-  const quien = ganador === 'jugador' ? 'Tú ganas' : 'La máquina gana';
-  mostrarMensaje(puntosBaza > 0 ? `${quien} la baza (+${puntosBaza} puntos)` : `${quien} la baza (sin puntos)`);
-
-  if (estado.manoJugador.length === 0 && estado.manoMaquina.length === 0) {
-    setTimeout(terminarPartida, 1200);
-    return;
+  function robar() {
+    if (mazo.length === 0) return;
+    if (manoJugador.length < 3 && mazo.length > 0) manoJugador.push(mazo.pop());
+    if (manoMaquina.length < 3 && mazo.length > 0) manoMaquina.push(mazo.pop());
   }
-  if (estado.lider === 'maquina') setTimeout(turnoMaquinaLidera, 1300);
-}
 
-function robarCartas(ganador) {
-  const orden = ganador === 'jugador' ? ['jugador', 'maquina'] : ['maquina', 'jugador'];
-  for (const quien of orden) {
-    if (estado.mazo.length === 0) continue;
-    const carta = estado.mazo.shift();
-    if (quien === 'jugador') estado.manoJugador.push(carta);
-    else estado.manoMaquina.push(carta);
+  function iniciar() {
+    mazo = crearMazo();
+    triunfo = mazo[0];
+    manoJugador = [mazo.pop(), mazo.pop(), mazo.pop()];
+    manoMaquina = [mazo.pop(), mazo.pop(), mazo.pop()];
+    puntosJugador = 0;
+    puntosMaquina = 0;
+    turno = 'jugador';
+    cartaMesa = null;
+    renderizar();
   }
-}
 
-function terminarPartida() {
-  estado.jugando = false;
-  let resultado = 'Empate';
-  if (estado.puntosJugador > estado.puntosMaquina) resultado = '¡Ganaste!';
-  else if (estado.puntosMaquina > estado.puntosJugador) resultado = 'Perdiste';
+  function renderizar() {
+    document.getElementById('puntos-jugador').textContent = puntosJugador;
+    document.getElementById('puntos-maquina').textContent = puntosMaquina;
+    document.getElementById('cartas-mazo').textContent = mazo.length;
+    document.getElementById('triunfo').textContent = NOMBRES_VALOR[triunfo.valor] + ' de ' + triunfo.palo;
 
-  document.getElementById('fin-titulo').textContent = resultado;
-  document.getElementById('fin-detalle').textContent =
-    `Tú: ${estado.puntosJugador} puntos · Máquina: ${estado.puntosMaquina} puntos`;
-  mostrarPantalla('fin');
-}
+    let divMano = document.getElementById('mano-jugador');
+    divMano.innerHTML = '';
+    manoJugador.forEach((carta, i) => {
+      let btn = document.createElement('button');
+      btn.className = 'carta';
+      btn.textContent = NOMBRES_VALOR[carta.valor] + '\n' + carta.palo[0].toUpperCase();
+      btn.onclick = () => jugarCarta(i);
+      if (turno !== 'jugador') btn.disabled = true;
+      divMano.appendChild(btn);
+    });
 
-/* ---------- DOM ---------- */
+    let msg = document.getElementById('mensaje');
+    if (turno === 'jugador') msg.textContent = 'Elige tu carta.';
+    else if (turno === 'maquina') msg.textContent = 'Turno de la máquina...';
+    else if (turno === 'respuesta-jugador') msg.textContent = 'La máquina abrió la baza. Elige tu carta.';
+    else msg.textContent = '';
+  }
 
-const pantallas = {
-  inicio: document.getElementById('pantalla-inicio'),
-  juego: document.getElementById('pantalla-juego'),
-  fin: document.getElementById('pantalla-fin')
-};
+  function jugarCarta(idx) {
+    if (turno === 'jugador') {
+      cartaMesa = manoJugador.splice(idx, 1)[0];
+      turno = 'maquina';
+      renderizar();
+      setTimeout(turnoMaquina, 800);
+    } else if (turno === 'respuesta-jugador') {
+      let cartaJugador = manoJugador.splice(idx, 1)[0];
+      resolverBaza(cartaMesa, cartaJugador, false);
+    }
+  }
 
-function mostrarPantalla(nombre) {
-  Object.values(pantallas).forEach(p => p.classList.add('oculta'));
-  pantallas[nombre].classList.remove('oculta');
-}
+  function turnoMaquina() {
+    if (turno === 'maquina') {
+      // Máquina abre la baza
+      let idx = Math.floor(Math.random() * manoMaquina.length);
+      cartaMesa = manoMaquina.splice(idx, 1)[0];
+      turno = 'respuesta-jugador';
+      renderizar();
+    }
+  }
 
-function crearCartaHTML(carta, jugable) {
-  const etiqueta = `${NOMBRES_VALOR[carta.valor]}${simboloPalo(carta.palo)}`;
-  const clase = `carta carta-${carta.palo}${jugable ? ' jugable' : ''}`;
-  return `<div class="${clase}" title="${nombreCarta(carta)}">${etiqueta}</div>`;
-}
+  function resolverBaza(cartaAbre, cartaResponde, jugadorAbrio) {
+    let paloAbierto = cartaAbre.palo;
+    let jugadorGana;
+    if (jugadorAbrio) {
+      jugadorGana = ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto);
+    } else {
+      jugadorGana = !ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto);
+    }
 
-function simboloPalo(palo) {
-  return { oros: '🪙', copas: '🏆', espadas: '⚔️', bastos: '🌳' }[palo];
-}
+    let puntosBaza = PUNTOS_VALOR[cartaAbre.valor] + PUNTOS_VALOR[cartaResponde.valor];
+    if (jugadorGana) {
+      puntosJugador += puntosBaza;
+      turno = 'jugador';
+    } else {
+      puntosMaquina += puntosBaza;
+      turno = 'maquina';
+    }
 
-function render() {
-  document.getElementById('puntos-jugador').textContent = estado.puntosJugador;
-  document.getElementById('puntos-maquina').textContent = estado.puntosMaquina;
-  document.getElementById('mazo-contador').textContent = estado.mazo.length;
-  document.getElementById('triunfo').textContent = estado.triunfo ? nombreCarta(estado.triunfo) : '';
+    cartaMesa = null;
+    robar();
 
-  const manoMaquinaEl = document.getElementById('mano-maquina');
-  manoMaquinaEl.innerHTML = estado.manoMaquina.map(() => '<div class="carta carta-dorso"></div>').join('');
+    if (manoJugador.length === 0 && manoMaquina.length === 0) {
+      finJuego();
+      return;
+    }
 
-  const manoJugadorEl = document.getElementById('mano-jugador');
-  const puedeJugar = estado.jugando && (!estado.cartaLider || estado.cartaLider.de === 'maquina');
-  manoJugadorEl.innerHTML = estado.manoJugador
-    .map((carta, i) => crearCartaHTML(carta, puedeJugar).replace('class="carta', `data-indice="${i}" class="carta`))
-    .join('');
-  if (puedeJugar) {
-    manoJugadorEl.querySelectorAll('.jugable').forEach(elCarta => {
-      elCarta.addEventListener('click', () => jugarCartaJugador(Number(elCarta.dataset.indice)));
+    renderizar();
+    if (turno === 'maquina') setTimeout(turnoMaquina, 800);
+  }
+
+  function finJuego() {
+    let msg = document.getElementById('mensaje');
+    if (puntosJugador > puntosMaquina) msg.textContent = '¡Ganaste! ' + puntosJugador + ' vs ' + puntosMaquina;
+    else if (puntosMaquina > puntosJugador) msg.textContent = 'Ganó la máquina. ' + puntosMaquina + ' vs ' + puntosJugador;
+    else msg.textContent = 'Empate. ' + puntosJugador + ' cada uno.';
+
+    // Guardar ranking
+    let ranking = JSON.parse(localStorage.getItem('ranking') || '[]');
+    ranking.push({ nombre: nombreJugador || 'Jugador', puntos: puntosJugador, fecha: new Date().toLocaleDateString() });
+    ranking.sort((a, b) => b.puntos - a.puntos);
+    localStorage.setItem('ranking', JSON.stringify(ranking.slice(0, 10)));
+    mostrarRanking();
+
+    document.getElementById('btn-reiniciar').style.display = 'block';
+  }
+
+  function mostrarRanking() {
+    let ranking = JSON.parse(localStorage.getItem('ranking') || '[]');
+    let div = document.getElementById('ranking');
+    if (!div) return;
+    div.innerHTML = '<h3>🏆 Ranking</h3>';
+    ranking.forEach((r, i) => {
+      div.innerHTML += `<p>${i+1}. ${r.nombre} — ${r.puntos} pts (${r.fecha})</p>`;
     });
   }
 
-  const jugadaJugadorEl = document.getElementById('carta-jugada-jugador');
-  jugadaJugadorEl.innerHTML = estado.cartaLider && estado.cartaLider.de === 'jugador'
-    ? crearCartaHTML(estado.cartaLider.carta, false)
-    : (estado.ultimoResultado ? crearCartaHTML(estado.ultimoResultado.cartaJugador, false) : '');
+  window.addEventListener('DOMContentLoaded', () => {
+    nombreJugador = localStorage.getItem('nombreJugador') || 'Jugador';
+    document.getElementById('nombre-jugador').textContent = nombreJugador;
+    mostrarRanking();
 
-  const jugadaMaquinaEl = document.getElementById('carta-jugada-maquina');
-  jugadaMaquinaEl.innerHTML = estado.cartaLider && estado.cartaLider.de === 'maquina'
-    ? crearCartaHTML(estado.cartaLider.carta, false)
-    : (estado.ultimoResultado && !estado.cartaLider ? crearCartaHTML(estado.ultimoResultado.cartaMaquina, false) : '');
-}
+    let btnJugar = document.getElementById('btn-jugar');
+    if (btnJugar) btnJugar.onclick = iniciar;
 
-function mostrarMensaje(texto) {
-  document.getElementById('mensaje').textContent = texto;
-}
-
-document.getElementById('btn-jugar').addEventListener('click', iniciarPartida);
-document.getElementById('btn-jugar-de-nuevo').addEventListener('click', iniciarPartida);
-
-mostrarPantalla('inicio');
-
+    let btnReiniciar = document.getElementById('btn-reiniciar');
+    if (btnReiniciar) {
+      btnReiniciar.style.display = 'none';
+      btnReiniciar.onclick = () => { btnReiniciar.style.display = 'none'; iniciar(); };
+    }
+  });
 })();
