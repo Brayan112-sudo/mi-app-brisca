@@ -6,7 +6,7 @@
   const PUNTOS_VALOR = { 1: 11, 2: 0, 3: 10, 4: 0, 5: 0, 6: 0, 7: 0, 10: 2, 11: 3, 12: 4 };
   const ORDEN_FUERZA = [1, 3, 12, 11, 10, 7, 6, 5, 4, 2];
 
-  let mazo, triunfo, manoJugador, manoMaquina, puntosJugador, puntosMaquina, turno, nombreJugador, cartaMesa;
+  let mazo, triunfo, manoJugador, manoMaquina, puntosJugador, puntosMaquina, turno, cartaMesa;
 
   function crearMazo() {
     let m = [];
@@ -31,14 +31,45 @@
     return false;
   }
 
-  function puntos(cartas) {
-    return cartas.reduce((s, c) => s + PUNTOS_VALOR[c.valor], 0);
-  }
+  function puntosCarta(carta) { return PUNTOS_VALOR[carta.valor]; }
 
   function robar() {
     if (mazo.length === 0) return;
     if (manoJugador.length < 3 && mazo.length > 0) manoJugador.push(mazo.pop());
     if (manoMaquina.length < 3 && mazo.length > 0) manoMaquina.push(mazo.pop());
+  }
+
+  function mostrarPantalla(id) {
+    ['pantalla-inicio', 'pantalla-juego', 'pantalla-fin'].forEach(p => {
+      let el = document.getElementById(p);
+      if (el) el.classList.toggle('oculta', p !== id);
+    });
+  }
+
+  function nombreCarta(carta) {
+    return NOMBRES_VALOR[carta.valor] + ' de ' + carta.palo;
+  }
+
+  function renderMano() {
+    let div = document.getElementById('mano-jugador');
+    div.innerHTML = '';
+    manoJugador.forEach((carta, i) => {
+      let btn = document.createElement('button');
+      btn.className = 'carta';
+      btn.textContent = NOMBRES_VALOR[carta.valor] + '\n' + carta.palo[0].toUpperCase();
+      btn.disabled = (turno !== 'jugador' && turno !== 'respuesta-jugador');
+      btn.onclick = () => jugarCarta(i);
+      div.appendChild(btn);
+    });
+    document.getElementById('puntos-jugador').textContent = puntosJugador;
+    document.getElementById('puntos-maquina').textContent = puntosMaquina;
+    document.getElementById('mazo-contador').textContent = mazo.length;
+    document.getElementById('triunfo').textContent = nombreCarta(triunfo);
+  }
+
+  function setMensaje(txt) {
+    let el = document.getElementById('mensaje');
+    if (el) el.textContent = txt;
   }
 
   function iniciar() {
@@ -50,74 +81,50 @@
     puntosMaquina = 0;
     turno = 'jugador';
     cartaMesa = null;
-    renderizar();
-  }
-
-  function renderizar() {
-    document.getElementById('puntos-jugador').textContent = puntosJugador;
-    document.getElementById('puntos-maquina').textContent = puntosMaquina;
-    document.getElementById('cartas-mazo').textContent = mazo.length;
-    document.getElementById('triunfo').textContent = NOMBRES_VALOR[triunfo.valor] + ' de ' + triunfo.palo;
-
-    let divMano = document.getElementById('mano-jugador');
-    divMano.innerHTML = '';
-    manoJugador.forEach((carta, i) => {
-      let btn = document.createElement('button');
-      btn.className = 'carta';
-      btn.textContent = NOMBRES_VALOR[carta.valor] + '\n' + carta.palo[0].toUpperCase();
-      btn.onclick = () => jugarCarta(i);
-      if (turno !== 'jugador') btn.disabled = true;
-      divMano.appendChild(btn);
-    });
-
-    let msg = document.getElementById('mensaje');
-    if (turno === 'jugador') msg.textContent = 'Elige tu carta.';
-    else if (turno === 'maquina') msg.textContent = 'Turno de la máquina...';
-    else if (turno === 'respuesta-jugador') msg.textContent = 'La máquina abrió la baza. Elige tu carta.';
-    else msg.textContent = '';
+    mostrarPantalla('pantalla-juego');
+    renderMano();
+    setMensaje('Elige tu carta.');
   }
 
   function jugarCarta(idx) {
     if (turno === 'jugador') {
       cartaMesa = manoJugador.splice(idx, 1)[0];
+      document.getElementById('carta-jugada-jugador').textContent = nombreCarta(cartaMesa);
       turno = 'maquina';
-      renderizar();
-      setTimeout(turnoMaquina, 800);
+      renderMano();
+      setMensaje('Turno de la máquina...');
+      setTimeout(turnoMaquina, 900);
     } else if (turno === 'respuesta-jugador') {
       let cartaJugador = manoJugador.splice(idx, 1)[0];
+      document.getElementById('carta-jugada-jugador').textContent = nombreCarta(cartaJugador);
       resolverBaza(cartaMesa, cartaJugador, false);
     }
   }
 
   function turnoMaquina() {
     if (turno === 'maquina') {
-      // Máquina abre la baza
       let idx = Math.floor(Math.random() * manoMaquina.length);
       cartaMesa = manoMaquina.splice(idx, 1)[0];
+      document.getElementById('carta-jugada-maquina').textContent = nombreCarta(cartaMesa);
       turno = 'respuesta-jugador';
-      renderizar();
+      renderMano();
+      setMensaje('La máquina jugó ' + nombreCarta(cartaMesa) + '. Elige tu carta.');
     }
   }
 
   function resolverBaza(cartaAbre, cartaResponde, jugadorAbrio) {
     let paloAbierto = cartaAbre.palo;
-    let jugadorGana;
-    if (jugadorAbrio) {
-      jugadorGana = ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto);
-    } else {
-      jugadorGana = !ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto);
-    }
+    let jugadorGana = jugadorAbrio
+      ? ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto)
+      : !ganaBaza(cartaAbre, cartaResponde, triunfo.palo, paloAbierto);
 
-    let puntosBaza = PUNTOS_VALOR[cartaAbre.valor] + PUNTOS_VALOR[cartaResponde.valor];
-    if (jugadorGana) {
-      puntosJugador += puntosBaza;
-      turno = 'jugador';
-    } else {
-      puntosMaquina += puntosBaza;
-      turno = 'maquina';
-    }
+    let pts = puntosCarta(cartaAbre) + puntosCarta(cartaResponde);
+    if (jugadorGana) { puntosJugador += pts; turno = 'jugador'; }
+    else { puntosMaquina += pts; turno = 'maquina'; }
 
     cartaMesa = null;
+    document.getElementById('carta-jugada-jugador').textContent = '';
+    document.getElementById('carta-jugada-maquina').textContent = '';
     robar();
 
     if (manoJugador.length === 0 && manoMaquina.length === 0) {
@@ -125,48 +132,28 @@
       return;
     }
 
-    renderizar();
-    if (turno === 'maquina') setTimeout(turnoMaquina, 800);
+    renderMano();
+    if (turno === 'jugador') setMensaje('Elige tu carta.');
+    else setTimeout(turnoMaquina, 900);
   }
 
   function finJuego() {
-    let msg = document.getElementById('mensaje');
-    if (puntosJugador > puntosMaquina) msg.textContent = '¡Ganaste! ' + puntosJugador + ' vs ' + puntosMaquina;
-    else if (puntosMaquina > puntosJugador) msg.textContent = 'Ganó la máquina. ' + puntosMaquina + ' vs ' + puntosJugador;
-    else msg.textContent = 'Empate. ' + puntosJugador + ' cada uno.';
+    mostrarPantalla('pantalla-fin');
+    let titulo = document.getElementById('fin-titulo');
+    let detalle = document.getElementById('fin-detalle');
+    if (puntosJugador > puntosMaquina) titulo.textContent = '¡Ganaste!';
+    else if (puntosMaquina > puntosJugador) titulo.textContent = 'Ganó la máquina.';
+    else titulo.textContent = 'Empate.';
+    detalle.textContent = 'Tú: ' + puntosJugador + ' — Máquina: ' + puntosMaquina;
 
-    // Guardar ranking
     let ranking = JSON.parse(localStorage.getItem('ranking') || '[]');
-    ranking.push({ nombre: nombreJugador || 'Jugador', puntos: puntosJugador, fecha: new Date().toLocaleDateString() });
+    ranking.push({ nombre: 'Jugador', puntos: puntosJugador, fecha: new Date().toLocaleDateString() });
     ranking.sort((a, b) => b.puntos - a.puntos);
     localStorage.setItem('ranking', JSON.stringify(ranking.slice(0, 10)));
-    mostrarRanking();
-
-    document.getElementById('btn-reiniciar').style.display = 'block';
-  }
-
-  function mostrarRanking() {
-    let ranking = JSON.parse(localStorage.getItem('ranking') || '[]');
-    let div = document.getElementById('ranking');
-    if (!div) return;
-    div.innerHTML = '<h3>🏆 Ranking</h3>';
-    ranking.forEach((r, i) => {
-      div.innerHTML += `<p>${i+1}. ${r.nombre} — ${r.puntos} pts (${r.fecha})</p>`;
-    });
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    nombreJugador = localStorage.getItem('nombreJugador') || 'Jugador';
-    document.getElementById('nombre-jugador').textContent = nombreJugador;
-    mostrarRanking();
-
-    let btnJugar = document.getElementById('btn-jugar');
-    if (btnJugar) btnJugar.onclick = iniciar;
-
-    let btnReiniciar = document.getElementById('btn-reiniciar');
-    if (btnReiniciar) {
-      btnReiniciar.style.display = 'none';
-      btnReiniciar.onclick = () => { btnReiniciar.style.display = 'none'; iniciar(); };
-    }
+    document.getElementById('btn-jugar').onclick = iniciar;
+    document.getElementById('btn-jugar-de-nuevo').onclick = iniciar;
   });
 })();
